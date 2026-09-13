@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  temporal-postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    volumes:
+      - temporal-postgres:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:1.24
+    depends_on:
+      - temporal-postgres
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgres
+    ports:
+      - "7233:7233"
+
+  atlas-mock:
+    build: .
+    command: uvicorn app.suppliers.mock_servers.atlas_server:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+
+  nova-mock:
+    build: .
+    command: uvicorn app.suppliers.mock_servers.nova_server:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      - temporal
+      - atlas-mock
+      - nova-mock
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - ATLAS_URL=http://atlas-mock:8001
+      - NOVA_URL=http://nova-mock:8002
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: .
+    command: python -m app.worker
+    depends_on:
+      - temporal
+      - atlas-mock
+      - nova-mock
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - ATLAS_URL=http://atlas-mock:8001
+      - NOVA_URL=http://nova-mock:8002
+    volumes:
+      - ./:/app
+
+volumes:
+  temporal-postgres:
