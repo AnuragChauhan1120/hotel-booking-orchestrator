@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
@@ -30,11 +31,29 @@ async def startup() -> None:
     repo.init_db()
 
 
+async def _connect_with_retry(address: str, max_attempts: int = 15, delay_seconds: float = 2.0) -> Client:
+    """Same rationale as worker.py's version: Temporal's auto-setup container
+    can take a while to become ready, so retry instead of failing the first
+    request that happens to race it."""
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await Client.connect(address)
+        except RuntimeError as exc:
+            last_error = exc
+            logger.warning(
+                "temporal not ready yet, retrying",
+                extra={"attempt": attempt, "max_attempts": max_attempts, "address": address, "error": str(exc)},
+            )
+            await asyncio.sleep(delay_seconds)
+    raise RuntimeError(f"could not connect to temporal at {address} after {max_attempts} attempts") from last_error
+
+
 async def _get_temporal_client() -> Client:
     global _temporal_client
     if _temporal_client is None:
         temporal_address = os.environ.get("TEMPORAL_ADDRESS", "localhost:7233")
-        _temporal_client = await Client.connect(temporal_address)
+        _temporal_client = await _connect_with_retry(temporal_address)
     return _temporal_client
 
 

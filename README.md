@@ -27,7 +27,7 @@ This single command starts five containers:
 |`api`|8000|FastAPI app (search + booking endpoints)|
 |`worker`|—|Temporal worker executing `BookingWorkflow`|
 
-Wait for the `worker` container to log `worker started, task\_queue=booking-task-queue` — that confirms the workflow/activities
+Wait for the `worker` container to log `worker started, task_queue=booking-task-queue` — that confirms the workflow/activities
 registered correctly before you send any requests.
 
 **Running tests** (from the host, needs Python 3.11+ and
@@ -44,35 +44,35 @@ pytest tests/ -v
 
 ```mermaid
 flowchart TB
-    Client(\[Client])
+    Client([Client])
 
-    subgraph API\["FastAPI app (api container)"]
-        Search\["POST /search/hotels"]
-        Book\["POST /bookings"]
-        Status\["GET /bookings/id/status"]
+    subgraph API["FastAPI app (api container)"]
+        Search["POST /search/hotels"]
+        Book["POST /bookings"]
+        Status["GET /bookings/{workflow_id}/status"]
     end
 
-    subgraph SearchLayer\["Search layer"]
-        Service\["search/service.py\\nfan-out + dedupe"]
-        Ranking\["search/ranking.py\\nscoring"]
+    subgraph SearchLayer["Search layer"]
+        Service["search/service.py\<br/>fan-out + dedupe"]
+        Ranking["search/ranking.py\<br/>scoring"]
     end
 
-    subgraph SupplierLayer\["Supplier layer"]
-        AtlasAdapter\["AtlasAdapter"]
-        NovaAdapter\["NovaAdapter"]
+    subgraph SupplierLayer["Supplier layer"]
+        AtlasAdapter["AtlasAdapter"]
+        NovaAdapter["NovaAdapter"]
     end
 
-    AtlasMock\[("Atlas mock API\\n:8001")]
-    NovaMock\[("Nova mock API\\n:8002")]
+    AtlasMock[("Atlas mock API\<br/>:8001")]
+    NovaMock[("Nova mock API\<br/>:8002")]
 
-    subgraph TemporalSys\["Temporal"]
-        TemporalServer\[("Temporal server\\n:7233")]
-        Worker\["worker.py"]
-        Workflow\["BookingWorkflow"]
-        Activities\["activities.py"]
+    subgraph TemporalSys["Temporal"]
+        TemporalServer[("Temporal server\<br/>:7233")]
+        Worker["worker.py"]
+        Workflow["BookingWorkflow"]
+        Activities["activities.py"]
     end
 
-    DB\[("SQLite\\ntravel\_platform.db")]
+    DB[("SQLite\<br/>travel_platform.db")]
 
     Client --> Search
     Client --> Book
@@ -107,8 +107,8 @@ flowchart TB
 ```json
 {
   "destination": "New York",
-  "check\_in": "2026-12-01",
-  "check\_out": "2026-12-05",
+  "check_in": "2026-12-01",
+  "check_out": "2026-12-05",
   "guests": 2,
   "rooms": 1
 }
@@ -118,43 +118,43 @@ flowchart TB
 
 ```json
 {
-  "request\_id": "6b91aa01-0432-4051-abeb-385f2ace7dc1",
-  "offers": \[
+  "request_id": "6b91aa01-0432-4051-abeb-385f2ace7dc1",
+  "offers": [
     {
-      "offer\_id": "0ac30aee-8c05-4319-9d94-8ea37dc33b3a",
+      "offer_id": "0ac30aee-8c05-4319-9d94-8ea37dc33b3a",
       "offer": {
-        "supplier\_id": "nova",
-        "supplier\_offer\_ref": "NOVA-55",
-        "property\_id": "NOVA-55",
-        "property\_name": "Nova Central Suites",
+        "supplier_id": "nova",
+        "supplier_offer_ref": "NOVA-55",
+        "property_id": "NOVA-55",
+        "property_name": "Nova Central Suites",
         "location": "New York",
-        "room\_type": "Standard Queen",
-        "check\_in": "2026-12-01",
-        "check\_out": "2026-12-05",
+        "room_type": "Standard Queen",
+        "check_in": "2026-12-01",
+        "check_out": "2026-12-05",
         "guests": 2,
         "rooms": 1,
         "currency": "USD",
-        "base\_price": "126.05",
-        "taxes\_and\_fees": "17.65",
-        "total\_price": "143.70",
-        "cancellation\_policy": {
+        "base_price": "126.05",
+        "taxes_and_fees": "17.65",
+        "total_price": "143.70",
+        "cancellation_policy": {
           "refundable": true,
-          "free\_cancellation\_until": null,
+          "free_cancellation_until": null,
           "description": "Refundable"
         },
         "availability": "available",
-        "supplier\_confidence": 1.0
+        "supplier_confidence": 1.0
       }
     }
   ],
-  "suppliers\_queried": \["atlas", "nova"],
-  "suppliers\_failed": \[]
+  "suppliers_queried": ["atlas", "nova"],
+  "suppliers_failed": []
 }
 ```
 
-`offer\_id` is the value to pass to `/bookings` — it's the DB primary key of
-the persisted offer, not `supplier\_offer\_ref`, so a booking always traces
-back to exactly what was quoted. `suppliers\_failed` is non-empty (rather
+`offer_id` is the value to pass to `/bookings` — it's the DB primary key of
+the persisted offer, not `supplier_offer_ref`, so a booking always traces
+back to exactly what was quoted. `suppliers_failed` is non-empty (rather
 than the whole call erroring) when one supplier times out or errors —
 partial results still return.
 
@@ -163,27 +163,27 @@ partial results still return.
 **Request**
 
 ```json
-{ "offer\_id": "0ac30aee-8c05-4319-9d94-8ea37dc33b3a", "client\_reference": "test-1" }
+{ "offer_id": "0ac30aee-8c05-4319-9d94-8ea37dc33b3a", "client_reference": "test-1" }
 ```
 
-`client\_reference` is a caller-supplied idempotency key — sending the same
+`client_reference` is a caller-supplied idempotency key — sending the same
 value twice returns the same booking rather than creating a duplicate.
 
 **Response `200`**
 
 ```json
 {
-  "workflow\_id": "booking-test-1",
-  "booking\_id": "949eb9cd-d4b4-48ab-a991-905dc597c9f1",
+  "workflow_id": "booking-test-1",
+  "booking_id": "949eb9cd-d4b4-48ab-a991-905dc597c9f1",
   "status": "confirmed"
 }
 ```
 
-`status` is one of `confirmed`, `failed`, or `requires\_manual\_review`
+`status` is one of `confirmed`, `failed`, or `requires_manual_review`
 (the latter when supplier confirmation times out, or when a saga
 compensation itself fails — see Key engineering decisions).
 
-### `GET /bookings/{workflow\_id}/status`
+### `GET /bookings/{workflow_id}/status`
 
 Live query straight into the running (or completed) Temporal workflow —
 not a DB read — so it reflects true in-flight state.
@@ -191,10 +191,10 @@ not a DB read — so it reflects true in-flight state.
 **Response `200`**
 
 ```json
-{ "status": "confirmed", "reason": "", "booking\_id": "949eb9cd-d4b4-48ab-a991-905dc597c9f1" }
+{ "status": "confirmed", "reason": "", "booking_id": "949eb9cd-d4b4-48ab-a991-905dc597c9f1" }
 ```
 
-### `POST /bookings/{workflow\_id}/cancel`
+### `POST /bookings/{workflow_id}/cancel`
 
 Cancels an in-flight workflow.
 
@@ -210,63 +210,63 @@ Cancels an in-flight workflow.
 
 ```mermaid
 erDiagram
-    SEARCH\_REQUESTS ||--o{ OFFERS : produces
-    BOOKINGS ||--o{ BOOKING\_STATUS\_HISTORY : has
+    SEARCH_REQUESTS ||--o{ OFFERS : produces
+    BOOKINGS ||--o{ BOOKING_STATUS_HISTORY : has
 
-    SEARCH\_REQUESTS {
+    SEARCH_REQUESTS {
         string id PK
         string destination
-        string check\_in
-        string check\_out
+        string check_in
+        string check_out
         int guests
         int rooms
-        json suppliers\_queried
-        json suppliers\_failed
-        datetime created\_at
+        json suppliers_queried
+        json suppliers_failed
+        datetime created_at
     }
 
     OFFERS {
         string id PK
-        string search\_request\_id FK
-        string supplier\_id
-        string supplier\_offer\_ref
-        string property\_id
-        string property\_name
-        string room\_type
+        string search_request_id FK
+        string supplier_id
+        string supplier_offer_ref
+        string property_id
+        string property_name
+        string room_type
         string currency
-        numeric total\_price
-        json raw\_offer\_json
-        datetime created\_at
+        numeric total_price
+        json raw_offer_json
+        datetime created_at
     }
 
     BOOKINGS {
         string id PK
-        string workflow\_id UK
-        string offer\_id
-        string client\_reference UK
-        string supplier\_id
-        string supplier\_booking\_ref
+        string workflow_id UK
+        string offer_id
+        string client_reference UK
+        string supplier_id
+        string supplier_booking_ref
         string status
-        datetime created\_at
-        datetime updated\_at
+        datetime created_at
+        datetime updated_at
     }
 
-    BOOKING\_STATUS\_HISTORY {
+    BOOKING_STATUS_HISTORY {
         string id PK
-        string booking\_id FK
+        string booking_id FK
         string status
         string reason
-        datetime created\_at
+        datetime created_at
     }
 ```
 
-`raw\_offer\_json` stores the full normalized `Offer` (not just the
+`raw_offer_json` stores the full normalized `Offer` (not just the
 summary columns) so a booking can reconstruct the exact quote it was
-built from. `BookingRecord.workflow\_id` and `client\_reference` are both
+built from. `BookingRecord.workflow_id` and `client_reference` are both
 unique-indexed — that's what makes idempotent booking creation possible.
-`booking\_status\_history.reason` doubles as the "failure or retry
-information" field the spec asks for (e.g. `price\_drift\_exceeded`,
-`compensation\_failed`, `supplier\_confirmation\_timeout`) — a failure or
+`booking_status_history.reason` doubles as the "failure or retry
+information" field the spec asks for (e.g. `price_drift_exceeded`,
+`compensation_failed`, `supplier_confirmation_timeout`) — a failure or
 retry outcome IS a status transition, so it's recorded in the same table
 rather than a separate one.
 
@@ -278,30 +278,30 @@ rather than a separate one.
 
 ```json
 {
-  "request\_id": "...",
-  "offers": \[ /\* only atlas offers \*/ ],
-  "suppliers\_queried": \["atlas", "nova"],
-  "suppliers\_failed": \["nova"]
+  "request_id": "...",
+  "offers": [ /* only atlas offers */ ],
+  "suppliers_queried": ["atlas", "nova"],
+  "suppliers_failed": ["nova"]
 }
 ```
 
-**Duplicate booking request** (same `client\_reference` sent twice):
+**Duplicate booking request** (same `client_reference` sent twice):
 
 ```json
 // first call
-{ "workflow\_id": "booking-test-1", "booking\_id": "949eb9cd-...", "status": "confirmed" }
+{ "workflow_id": "booking-test-1", "booking_id": "949eb9cd-...", "status": "confirmed" }
 // second call, identical body
-{ "workflow\_id": "booking-test-1", "booking\_id": "949eb9cd-...", "status": "confirmed" }
+{ "workflow_id": "booking-test-1", "booking_id": "949eb9cd-...", "status": "confirmed" }
 ```
 
-Same `booking\_id` both times — verified live, not just asserted.
+Same `booking_id` both times — verified live, not just asserted.
 
 **Structured log line** (JSON, one correlation ID traceable across
 layers):
 
 ```json
 {"level": "INFO", "logger": "activities", "message": "supplier reservation created",
- "correlation\_id": "booking-test-1", "supplier": "atlas", "supplier\_booking\_ref": "ATL-RES-9f3a2b1c"}
+ "correlation_id": "booking-test-1", "supplier": "atlas", "supplier_booking_ref": "ATL-RES-9f3a2b1c"}
 ```
 
 \---
@@ -312,18 +312,18 @@ layers):
 required (fake in-memory adapters via `conftest.py`, throwaway per-test
 SQLite files):
 
-* `test\_search\_merges\_both\_suppliers` — normalization/merge across suppliers
-* `test\_one\_supplier\_failing\_still\_returns\_partial\_results`
-* `test\_dedup\_keeps\_cheaper\_duplicate`
-* `test\_ranking\_prefers\_cheaper\_and\_more\_available\_offers`
-* `test\_ranking\_handles\_single\_offer\_without\_dividing\_by\_zero`
-* `test\_ranking\_empty\_list`
-* `test\_duplicate\_booking\_requests\_create\_only\_one\_row` — booking idempotency
-* `test\_status\_update\_records\_history`
+* `test_search_merges_both_suppliers` — normalization/merge across suppliers
+* `test_one_supplier_failing_still_returns_partial_results`
+* `test_dedup_keeps_cheaper_duplicate`
+* `test_ranking_prefers_cheaper_and_more_available_offers`
+* `test_ranking_handles_single_offer_without_dividing_by_zero`
+* `test_ranking_empty_list`
+* `test_duplicate_booking_requests_create_only_one_row` — booking idempotency
+* `test_status_update_records_history`
 
 **Manually verified live** (via `docker compose up` + curl, not automated):
 search end-to-end, booking end-to-end (`status: confirmed`), duplicate
-booking requests returning the same `booking\_id`, the `/status` query
+booking requests returning the same `booking_id`, the `/status` query
 endpoint, and correlation-ID propagation through worker logs.
 
 **Known test gaps** (honest accounting, not covered by either the
@@ -347,34 +347,34 @@ mutating a stale object.
 booking code depend only on the interface, never a concrete supplier —
 adding a third supplier means writing one new adapter class, zero
 changes elsewhere.
-* **Idempotency at two layers.** Temporal's `workflow\_id`
-(`booking-<client\_reference>`) prevents a duplicate *workflow* from
-starting; `client\_reference` passed through to the supplier's own
+* **Idempotency at two layers.** Temporal's `workflow_id`
+(`booking-<client_reference>`) prevents a duplicate *workflow* from
+starting; `client_reference` passed through to the supplier's own
 idempotency field prevents a duplicate *supplier booking* even if an
 Activity retries after a network blip.
 * **Saga-pattern compensation.** If the supplier reservation succeeds but
 persisting it internally fails, the workflow calls a compensating
-`cancel\_supplier\_reservation` activity. If compensation itself fails,
-the booking is marked `requires\_manual\_review` rather than retried
+`cancel_supplier_reservation` activity. If compensation itself fails,
+the booking is marked `requires_manual_review` rather than retried
 indefinitely — a stuck-but-visible state is safer than a silent loop.
 * **Correlation ID threaded end-to-end** (the unique feature — see
 below).
 * **Sync repo functions, async activities.** Temporal activities here are
 `async def` but call synchronous SQLAlchemy functions directly — fine
 for SQLite at this scale; a Postgres-backed production version should
-move DB calls to `asyncio.to\_thread(...)` or an async driver to avoid
+move DB calls to `asyncio.to_thread(...)` or an async driver to avoid
 blocking the event loop under load.
 * **SQLite over Postgres.** Faster to set up for a 3-day prototype;
 swapping is a one-line engine-URL change in `repo.py` since everything
 goes through SQLAlchemy.
-* **Dedup by (property\_name, location).** Simple, documented, and
+* **Dedup by (property_name, location).** Simple, documented, and
 deliberately naive — a real system would use fuzzy matching or shared
 property IDs across suppliers.
 
 ## Unique feature: correlation-ID tracing across the whole booking job
 
 Beyond the spec's required identifiers-in-logs, every booking generates
-one correlation ID (the Temporal `workflow\_id`) at the moment it starts,
+one correlation ID (the Temporal `workflow_id`) at the moment it starts,
 which is then threaded through **every** activity input dataclass and
 **every** repo call — not just logged once at the API boundary. The
 result: `docker compose logs worker | grep booking-test-1` shows the
@@ -388,7 +388,7 @@ worker → DB), without needing a distributed tracing system. Verified live
 
 ## Assumptions and known limitations
 
-* **`revalidate\_offer` doesn't call a real supplier re-quote endpoint.**
+* **`revalidate_offer` doesn't call a real supplier re-quote endpoint.**
 Neither mock supplier exposes single-offer re-pricing, so the activity
 currently treats the originally quoted price as still current (zero
 simulated drift). The threshold-check mechanism and pass/fail result
@@ -401,7 +401,7 @@ duplicates.
 interval, not configurable per environment.
 * **No auth or rate-limiting** on the API — out of scope for a 3-day
 prototype.
-* **`supplier\_confidence`** is a static default (`1.0`) for both
+* **`supplier_confidence`** is a static default (`1.0`) for both
 suppliers rather than derived from real historical success-rate data.
 * **Mock-supplier state is in-memory** (dict-backed) and resets whenever
 that container restarts — a booking created against a supplier
